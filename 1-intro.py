@@ -1,6 +1,6 @@
 import cv2
 
-image = cv2.imread("darren.JPG")
+image = cv2.imread("img/darren.jpg")
 
 [w,h,c] = image.shape
 
