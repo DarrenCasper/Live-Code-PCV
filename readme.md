@@ -96,3 +96,61 @@ perbedaan yang bisa dihasilkan oleh kedua fungsi ini, antara built in dari openc
 ### 4.2 Foto Perhitungan Tulis Tangan
 ![Perhitungan Manual Tulis Tangan](output/result.png)
 
+---
+
+## 5. Filter Spasial (Blur, Sharpening, Edge Detection)
+
+> **Referensi Kode:** `3-filter-spasial.py`
+
+### 5.1 Konvolusi pada Citra
+![Hasil Konvolusi](img/konvolusi.png)
+
+**Penjelasan:**
+* Konvolusi adalah proses mengalikan setiap piksel citra dengan kernel/filter dan menjumlahkan hasilnya untuk menghasilkan piksel baru.
+* Pada bagian ini, kernel rata-rata (average filter) diterapkan pada matriks contoh untuk melihat bagaimana nilai piksel dipengaruhi oleh tetangganya.
+* Proses ini menjadi dasar dari operasi blur, sharpening, serta deteksi tepi pada citra digital.
+
+**Placeholder Output Terminal:**
+```text
+Manual convolution:
+[[ 8.89 15.56 20.   15.56  8.89]
+ [15.56 38.89 47.78 38.89 15.56]
+ [20.   46.67 57.78 46.67 20.  ]
+ [17.78 41.11 47.78 41.11 17.78]
+ [11.11 17.78 20.   17.78 11.11]]
+
+OpenCV convolution:
+[[ 8.89 15.56 20.   15.56  8.89]
+ [15.56 38.89 47.78 38.89 15.56]
+ [20.   46.67 57.78 46.67 20.  ]
+ [17.78 41.11 47.78 41.11 17.78]
+ [11.11 17.78 20.   17.78 11.11]]
+```
+
+### 5.2 Hasil Visualisasi Blur
+![Hasil Blur Placeholder](output/blur.png)
+
+**Penjelasan:**
+* Filter box menghasilkan efek blur yang lebih halus dan merata.
+* Gaussian blur menghasilkan efek blur yang lebih natural dan lembut.
+* Median blur efektif untuk mengurangi noise salt-and-pepper tanpa menghilangkan tepi terlalu banyak.
+
+### 5.3 Hasil Visualisasi Penajaman dan Tepi
+![Hasil Sharpening & Tepi Placeholder](output/sharpen.png)
+
+**Penjelasan:**
+* Laplacian sharpening menonjolkan detail dan tepi pada citra.
+* Unsharp masking meningkatkan ketajaman dengan cara menambahkan mask perbedaan antara citra asli dan versi yang diblur.
+* Highboost memberikan penajaman lebih kuat dibanding unsharp masking biasa.
+* Operasi Sobel mendeteksi perubahan intensitas pada arah horizontal dan vertikal.
+* Magnitude gradien menunjukkan area dengan perubahan intensitas besar, yang biasanya menandakan tepi.
+* Arah gradien membantu mengetahui orientasi tepi pada citra.
+
+### 5.4 Analisis Umum
+* Filter blur digunakan untuk meredam detail kecil dan noise.
+* Filter sharpening digunakan untuk meningkatkan ketajaman citra.
+* Filter tepi digunakan untuk menonjolkan struktur objek dalam citra.
+* Kombinasi teknik ini sering dipakai untuk preprocessing sebelum analisis lanjutan seperti segmentasi dan pengenalan objek.
+
+---
+
