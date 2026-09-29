@@ -154,3 +154,35 @@ OpenCV convolution:
 
 ---
 
+## 6. Model Warna (RGB, CMYK, HSI, HSV)
+
+> **Referensi Kode:** `4-model-warna.py`
+
+### 6.1 Hasil Visualisasi Perbandingan Model Warna
+![Perbandingan Model Warna](output/output.png)
+
+**Penjelasan:**
+* **RGB (Original):** citra asli yang menjadi acuan sebelum dikonversi ke model warna lain.
+* **HSI - Hue:** menunjukkan komponen warna murni (corak) dari tiap piksel dalam derajat 0–360, dihitung manual menggunakan fungsi `rgb_to_hsi`. Karena noise pada latar belakang, area tersebut menghasilkan Hue yang acak (warna-warni).
+* **HSI - Saturation:** menunjukkan kemurnian/intensitas warna. Area hoodie yang berwarna pink cerah terlihat lebih terang (saturasi tinggi), sedangkan latar belakang abu-abu terlihat gelap (saturasi rendah karena mendekati warna netral/abu-abu).
+* **HSI - Intensity:** menunjukkan tingkat kecerahan rata-rata dari ketiga kanal RGB, mirip citra grayscale biasa.
+* **CMYK - Key (K):** menunjukkan komponen hitam (kegelapan) dari citra. Objek/pakaian yang gelap (celana hitam) menghasilkan nilai K tinggi (terang di visualisasi), sedangkan area terang seperti tembok menghasilkan nilai K rendah (gelap di visualisasi).
+* **HSV - Hue:** hasil konversi dari citra RGB hasil rekonstruksi balik `hsi_to_rgb`, dibandingkan dengan HSI-Hue untuk melihat konsistensi antar model warna.
+* **HSV - Saturation:** sama seperti HSI-Saturation, namun dihitung menggunakan `cv2.cvtColor` bawaan OpenCV (bukan manual).
+* **HSV - Red Mask:** hasil thresholding `cv2.inRange` pada rentang Hue 0–15 (warna kemerahan/pink). Terlihat bahwa mask berhasil menangkap area wajah (warna kulit) yang termasuk dalam rentang tersebut, meskipun hoodie berwarna pink tidak sepenuhnya tertangkap karena hue-nya berada sedikit di luar rentang yang ditentukan.
+
+### 6.2 Hasil Perhitungan Numerik
+![Output Terminal Model Warna](output/output2.png)
+
+**Penjelasan:**
+* `CMYK (center pixel)`: hasil konversi RGB ke CMYK pada satu piksel di tengah citra menggunakan fungsi manual `rgb_to_cmyk`, ditampilkan dalam persen (%).
+* `H maksimum pada gambar`: nilai Hue maksimum yang ditemukan setelah RGB hasil rekonstruksi (`hsi_to_rgb`) dikonversi ke HSV memakai OpenCV. Karena OpenCV menyimpan Hue dalam rentang 0–179 (bukan 0–360) untuk citra 8-bit, nilai maksimum yang didapat adalah 179.
+
+### 6.3 Analisis Umum
+* Model warna RGB cocok untuk penyimpanan/tampilan perangkat, sedangkan CMYK lebih relevan untuk kebutuhan pencetakan (subtractive color).
+* Model HSI dan HSV memisahkan informasi warna (Hue), kemurnian warna (Saturation), dan kecerahan (Intensity/Value), sehingga lebih mudah digunakan untuk segmentasi warna dibanding RGB yang ketiga kanalnya saling bercampur.
+* Perbedaan utama HSI dan HSV terletak pada perhitungan komponen kecerahannya: HSI menggunakan rata-rata ketiga kanal (I = (R+G+B)/3), sedangkan HSV menggunakan nilai maksimum (V = max(R,G,B)), sehingga hasil visualisasinya sedikit berbeda meskipun berasal dari citra yang sama.
+* Proses konversi RGB → HSI → RGB (rekonstruksi) menghasilkan citra yang mendekati aslinya, membuktikan bahwa transformasi antar model warna bersifat reversibel selama tidak ada pembulatan/clipping yang signifikan.
+
+---
+
