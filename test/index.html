@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorium Morfologi Citra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@600;700&display=swap">
+<style>
+/* Layout: lembar praktikum — kartu operasi di atas, tahap-tahap sebagai chip, grid masukan dan keluaran berdampingan, panel jendela di bawah */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#1a2332; --muted:#5b6677; --line:#d3d9e2;
+  --obj:#234e7d; --obj-ink:#ffffff; --grow:#f0b43c; --grow-ink:#3a2600;
+  --lost:#f6d4cf; --lost-ink:#9b2c1f; --kernel:#e0483a; --pad:#eef1f5; --chip:#e7ecf3;
+  --f-display:"Spectral",Georgia,serif; --f-body:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11161e; --surface:#19202b; --ink:#e6ebf2; --muted:#9aa5b5; --line:#2e3846;
+  --obj:#4f86c6; --obj-ink:#0b1420; --grow:#f2bd52; --grow-ink:#2b1c00;
+  --lost:#4a2420; --lost-ink:#ffb4a8; --kernel:#ff6a5a; --pad:#151b24; --chip:#222b38; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161e; --surface:#19202b; --ink:#e6ebf2; --muted:#9aa5b5; --line:#2e3846;
+  --obj:#4f86c6; --obj-ink:#0b1420; --grow:#f2bd52; --grow-ink:#2b1c00;
+  --lost:#4a2420; --lost-ink:#ffb4a8; --kernel:#ff6a5a; --pad:#151b24; --chip:#222b38; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1140px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:20px}
+h1{font-family:var(--f-display);font-size:clamp(1.6rem,3.5vw,2.2rem);margin:0;line-height:1.15;text-wrap:balance}
+.eyebrow{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.lede{margin:6px 0 0;color:var(--muted);max-width:70ch}
+
+.picker{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.picker label{font-weight:600}
+select{font:inherit;font-weight:500;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-width:240px;max-width:100%}
+
+.opcard{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+@media (max-width:700px){.opcard{grid-template-columns:1fr}}
+.opcard h2{font-family:var(--f-display);font-size:1.5rem;margin:0}
+.formula{font-family:var(--f-mono);font-size:1.05rem;margin:4px 0 10px;color:var(--ink)}
+.opcard p{margin:0 0 8px;max-width:72ch}
+.opcard ul{margin:4px 0 0;padding-left:20px;max-width:72ch}
+.opcard li{margin:2px 0}
+.ses{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.se{display:flex;flex-direction:column;gap:6px;align-items:center}
+.se .g{display:grid;grid-template-columns:repeat(3,26px);gap:3px;font-family:var(--f-mono);font-size:.85rem}
+.se .g div{height:26px;display:flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--line);color:var(--muted)}
+.se .g div.on{background:var(--kernel);border-color:var(--kernel);color:#fff;font-weight:600}
+.se .g div.zero{background:var(--chip);color:var(--ink);font-weight:600}
+.se small{color:var(--muted);font-size:.78rem;text-align:center;max-width:120px}
+
+.stages{display:flex;flex-wrap:wrap;gap:8px}
+.stage{font:inherit;font-size:.85rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--chip);color:var(--ink);cursor:pointer;font-family:var(--f-mono)}
+.stage.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.stage.done{border-color:var(--obj)}
+
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:inherit;font-weight:500;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);min-width:96px}
+button:focus-visible,select:focus-visible,input:focus-visible,.stage:focus-visible{outline:2px solid var(--kernel);outline-offset:2px}
+.speed{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.88rem;margin-left:auto}
+.speed input{width:120px;accent-color:var(--kernel)}
+.progress{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--kernel);width:0;transition:width .15s}
+
+.stagehead{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+.stagehead h3{font-family:var(--f-display);font-size:1.2rem;margin:0}
+.stagehead span{color:var(--muted);font-size:.9rem}
+.boards{display:grid;gap:24px}
+.boards.n2{grid-template-columns:1fr 1fr}
+.boards.n3{grid-template-columns:1fr 1fr 1fr}
+@media (max-width:900px){.boards.n3{grid-template-columns:1fr 1fr}}
+@media (max-width:640px){.boards.n2,.boards.n3{grid-template-columns:1fr}}
+.board{min-width:0;display:flex;flex-direction:column;gap:6px}
+.board h4{margin:0;font-family:var(--f-mono);font-size:.95rem;font-weight:600;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.board h4 small{font-weight:400;color:var(--muted)}
+.grid{position:relative;display:grid;grid-template-columns:repeat(13,1fr);aspect-ratio:13/11;width:100%;font-family:var(--f-mono);font-variant-numeric:tabular-nums;user-select:none}
+.cell{display:flex;align-items:center;justify-content:center;font-size:clamp(.66rem,1.4vw,.92rem);border:1px solid var(--line);margin:-.5px;background:var(--surface);color:var(--muted)}
+.cell.one{background:var(--obj);color:var(--obj-ink);font-weight:600;border-color:var(--obj)}
+.cell.pad{background:var(--pad);border-style:dashed;opacity:.75;font-size:clamp(.58rem,1.2vw,.76rem)}
+.cell.pad.one{background:var(--pad);color:var(--muted);font-weight:600;border-color:var(--line)}
+.cell.ghost{visibility:hidden}
+.cell.todo{color:var(--line)}
+.cell.grow{background:var(--grow);color:var(--grow-ink);font-weight:600;border-color:var(--grow)}
+.cell.lost{background:var(--lost);color:var(--lost-ink)}
+.grid.in .cell:not(.pad):not(.ghost){cursor:pointer}
+.grid.in .cell:not(.pad):not(.ghost):hover{outline:2px solid var(--kernel);outline-offset:-2px}
+.frame{position:absolute;border:3px solid var(--kernel);border-radius:6px;pointer-events:none;transition:left .12s ease,top .12s ease}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.82rem;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;border:1px solid var(--line)}
+
+.panel{display:grid;grid-template-columns:auto minmax(0,1fr);gap:24px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+@media (max-width:620px){.panel{grid-template-columns:1fr}}
+.mini{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:4px;font-family:var(--f-mono)}
+.mini div{display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid var(--line);font-size:1.1rem;background:var(--bg);color:var(--muted);position:relative}
+.mini div.one{background:var(--obj);color:var(--obj-ink);border-color:var(--obj);font-weight:600}
+.mini div.out{border-style:dashed;opacity:.75}
+.mini div.out::after{content:"luar";position:absolute;bottom:2px;font-size:.55rem;font-family:var(--f-body)}
+.mini div.off{background:transparent;color:var(--line);border-style:dotted}
+.mini div.ctr{box-shadow:inset 0 0 0 2px var(--kernel)}
+.pointvals{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--f-mono)}
+.pointvals div{border:1px solid var(--line);border-radius:8px;padding:8px 12px;text-align:center;min-width:90px}
+.pointvals b{display:block;font-size:1.3rem}
+.why{min-width:0;display:flex;flex-direction:column;gap:8px}
+.why .pos{font-family:var(--f-mono);font-size:.88rem;color:var(--muted)}
+.why .verdict{font-size:1.1rem;font-weight:600}
+.why .verdict b{font-family:var(--f-mono);padding:1px 8px;border-radius:5px}
+.v1{background:var(--obj);color:var(--obj-ink)} .vg{background:var(--grow);color:var(--grow-ink)} .v0{background:var(--bg);color:var(--ink);border:1px solid var(--line)} .vl{background:var(--lost);color:var(--lost-ink)}
+.why p{margin:0;max-width:64ch}
+
+.done{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--grow);border-radius:8px;padding:14px 16px}
+.done p{margin:0;max-width:80ch}
+.matrix-note{color:var(--muted);font-size:.85rem}
+@media (prefers-reduced-motion:reduce){.frame,.progress span{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Pengolahan Citra dan Video · Morfologi Citra</div>
+    <h1>Laboratorium Morfologi Citra</h1>
+    <p class="lede">Semua operasi dijalankan pada matriks acuan A (9 × 11, 35 piksel objek). Pilih operasi, lalu ikuti SE berjalan piksel demi piksel. Operasi gabungan dipecah menjadi beberapa tahap. Klik sel di grid masukan untuk melompat ke posisi itu.</p>
+  </header>
+
+  <div class="picker">
+    <label for="op">Operasi</label>
+    <select id="op"></select>
+  </div>
+
+  <section class="opcard">
+    <div>
+      <h2 id="opname"></h2>
+      <div class="formula" id="opformula"></div>
+      <p id="opdesc"></p>
+      <ul id="opeffects"></ul>
+    </div>
+    <div class="ses" id="opse"></div>
+  </section>
+
+  <div class="stages" id="stages"></div>
+
+  <div class="controls">
+    <button id="play" class="primary">Putar</button>
+    <button id="prev">◀ Mundur</button>
+    <button id="next">Maju ▶</button>
+    <button id="stageEnd">Selesaikan tahap</button>
+    <button id="end">Hasil akhir</button>
+    <button id="reset">Ulang</button>
+    <label class="speed" for="spd">Kecepatan <input id="spd" type="range" min="1" max="10" value="6"></label>
+  </div>
+  <div class="progress"><span id="bar"></span></div>
+
+  <div class="stagehead"><h3 id="stitle"></h3><span id="snote"></span></div>
+  <section class="boards" id="boards"></section>
+  <div class="legend">
+    <span><i style="background:var(--obj)"></i>1, masukan pertama juga 1</span>
+    <span><i style="background:var(--grow)"></i>1, masukan pertama 0 (bertambah)</span>
+    <span><i style="background:var(--lost)"></i>0, masukan pertama 1 (hilang)</span>
+    <span><i style="background:var(--surface)"></i>0, tetap 0</span>
+  </div>
+
+  <section class="panel" aria-live="polite">
+    <div>
+      <div class="eyebrow" id="minititle" style="margin-bottom:8px">Isi jendela 3×3</div>
+      <div id="miniwrap"></div>
+    </div>
+    <div class="why">
+      <div class="pos" id="pos"></div>
+      <div class="verdict" id="verdict"></div>
+      <p id="explain"></p>
+    </div>
+  </section>
+
+  <div class="done" id="done" hidden><p id="donetext"></p></div>
+  <p class="matrix-note">Penomoran baris dan kolom dimulai dari 0. Sel bergaris putus-putus berada di luar citra; nilainya dianggap latar (0), kecuali pada Aᶜ, di mana latar justru bernilai 1.</p>
+</div>
+
+<script>
+const A=[
+[0,0,0,0,0,0,0,0,0,0,0],
+[0,1,1,1,1,1,0,0,0,0,0],
+[0,1,1,0,1,1,0,0,0,0,0],
+[0,1,1,1,1,1,0,1,1,1,0],
+[0,1,1,1,1,1,1,1,1,1,0],
+[0,1,1,1,1,1,0,1,1,1,0],
+[0,0,0,0,0,0,0,0,0,0,0],
+[0,0,1,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0]];
+const R=9,C=11,N=R*C;
+const BOX=[[1,1,1],[1,1,1],[1,1,1]];
+const CROSS=[[0,1,0],[1,1,1],[0,1,0]];
+const CENTER=[[0,0,0],[0,1,0],[0,0,0]];
+const RING=[[1,1,1],[1,0,1],[1,1,1]];
+const sum=M=>M.reduce((s,r)=>s+r.reduce((a,b)=>a+b,0),0);
+const map=(fn)=>Array.from({length:R},(_,r)=>Array.from({length:C},(_,c)=>fn(r,c)));
+const get=(M,r,c,pad)=>(r<0||r>=R||c<0||c>=C)?pad:M[r][c];
+const sub=n=>String(n).split('').map(d=>'₀₁₂₃₄₅₆₇₈₉'[d]).join('');
+
+/* ---------- membangun tahap ---------- */
+let mats;
+function morph(inName,op,mask,pad,out,seName){
+  const M=mats[inName];
+  mats[out]=map((r,c)=>{let any=0,all=1;
+    for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){if(!mask[i+1][j+1])continue;const v=get(M,r+i,c+j,pad);any|=v;all&=v}
+    return op==='dil'?any:all});
+  return {type:'morph',ins:[inName],out,op,mask,pad,seName,title:out};
+}
+const PT={
+  '−':{f:(a,b)=>a&&!b?1:0,txt:(n,v,o)=>`${n[0]} = ${v[0]}, ${n[1]} = ${v[1]}. Hasil 1 hanya jika ${n[0]} = 1 dan ${n[1]} = 0.`},
+  '∩':{f:(a,b)=>a&&b?1:0,txt:(n,v,o)=>`${n[0]} = ${v[0]}, ${n[1]} = ${v[1]}. Irisan bernilai 1 hanya jika keduanya 1.`},
+  '∪':{f:(a,b)=>a||b?1:0,txt:(n,v,o)=>`${n[0]} = ${v[0]}, ${n[1]} = ${v[1]}. Gabungan bernilai 1 jika salah satunya 1.`},
+  'ᶜ':{f:a=>a?0:1,txt:(n,v,o)=>`${n[0]} = ${v[0]}, jadi komplemennya ${o}. Objek dan latar bertukar.`}
+};
+function point(ins,sym,out){
+  const f=PT[sym].f;
+  mats[out]=map((r,c)=>f(...ins.map(n=>mats[n][r][c])));
+  return {type:'point',ins,out,sym,title:out};
+}
+
+const OPS={
+ erosi:{name:'Erosi',formula:'A ⊖ B',ses:[['B',BOX,'kotak 3×3']],
+  desc:'Erosi mengikis objek. Piksel keluaran bernilai 1 hanya jika SE yang diletakkan di posisi itu muat seluruhnya di dalam objek. Dalam bahasa praktis: ambil nilai minimum dari semua piksel yang tertutup SE.',
+  effects:['Lubang di (2,3) membuat semua posisi di sekitarnya gagal, sehingga bagian atas blok kiri habis.','Piksel derau di (7,2) hilang.','Jembatan tipis di (4,6) hilang, kedua blok terpisah.','Hanya bagian yang cukup tebal untuk menampung kotak 3×3 yang tersisa: tiga piksel di blok kiri dan satu di blok kanan.'],
+  build:()=>[morph('A','ero',BOX,0,'A ⊖ B','B')],
+  done:n=>`Jumlah piksel objek turun dari 35 menjadi ${n}. Erosi membersihkan derau dan memutus jembatan, tetapi harganya mahal: objek menyusut drastis.`},
+ dilasi:{name:'Dilasi',formula:'A ⊕ B',ses:[['B',BOX,'kotak 3×3']],
+  desc:'Dilasi menumbuhkan objek. Piksel keluaran bernilai 1 bila SE yang diletakkan di posisi itu menyentuh objek, walau hanya pada satu sel. Dalam bahasa praktis: ambil nilai maksimum.',
+  effects:['Lubang di (2,3) tertutup.','Piksel derau di (7,2) membesar menjadi blok 3×3 dan menempel ke objek lewat baris 6.','Jembatan menebal, kedua blok menyatu rapat.','Seluruh objek melar satu piksel ke segala arah.'],
+  build:()=>[morph('A','dil',BOX,0,'A ⊕ B','B')],
+  done:n=>`Jumlah piksel objek naik dari 35 menjadi ${n}. Dilasi menutup lubang, tetapi objek jadi lebih gemuk dan derau ikut diperbesar.`},
+ opening:{name:'Opening',formula:'A ∘ B = (A ⊖ B) ⊕ B',ses:[['B',BOX,'kotak 3×3']],
+  desc:'Opening adalah erosi lalu dilasi dengan SE yang sama. Bagian yang lebih kecil dari SE hilang saat erosi dan tidak bisa kembali; bagian yang cukup besar dikembalikan ke ukuran semula oleh dilasi.',
+  effects:['Piksel derau di (7,2) hilang dan tidak kembali.','Jembatan di (4,6) putus, kedua blok terpisah.','Baris 1–2 blok kiri ikut hilang: lubang di (2,3) membuat bagian itu tidak bisa menampung kotak 3×3 di mana pun.','Yang tersisa adalah dua blok persegi panjang yang rapi di baris 3–5.'],
+  build:()=>[morph('A','ero',BOX,0,'A ⊖ B','B'),morph('A ⊖ B','dil',BOX,0,'A ∘ B','B')],
+  done:n=>`Hasil akhir ${n} piksel (dari 35). Opening membersihkan derau dan memutus jembatan tanpa membuat objek menyusut seperti erosi biasa.`},
+ closing:{name:'Closing',formula:'A • B = (A ⊕ B) ⊖ B',ses:[['B',BOX,'kotak 3×3']],
+  desc:'Closing adalah dilasi lalu erosi dengan SE yang sama. Celah dan lubang yang lebih kecil dari SE terisi saat dilasi dan tidak terbuka lagi; tepi luar objek dikembalikan ke posisi semula oleh erosi.',
+  effects:['Lubang di (2,3) tertutup.','Celah di (3,6) dan (5,6) di samping jembatan ikut terisi, sehingga kedua blok menyatu penuh.','Piksel derau di (7,2) tidak hilang, malah tersambung ke objek lewat (6,2).','Ukuran luar objek kembali seperti A.'],
+  build:()=>[morph('A','dil',BOX,0,'A ⊕ B','B'),morph('A ⊕ B','ero',BOX,0,'A • B','B')],
+  done:n=>`Hasil akhir ${n} piksel (dari 35). Closing hanya menambah empat piksel: lubang, dua celah di samping jembatan, dan sambungan ke derau.`},
+ batas:{name:'Ekstraksi batas',formula:'β(A) = A − (A ⊖ B)',ses:[['B',BOX,'kotak 3×3']],
+  desc:'Batas adalah piksel objek yang tidak bertahan saat erosi, yaitu lapisan terluar objek. Dengan kotak 3×3, batas yang ideal setebal satu piksel.',
+  effects:['Karena blok di A hanya setebal 3–5 piksel, erosi menyisakan sangat sedikit, sehingga hampir seluruh objek dihitung sebagai batas.','Piksel di sekeliling lubang (2,3) ikut menjadi batas, karena lubang juga punya tepi.','Derau dan jembatan seluruhnya menjadi batas.','Hanya empat piksel di baris 4 yang dianggap bagian dalam.'],
+  build:()=>[morph('A','ero',BOX,0,'A ⊖ B','B'),point(['A','A ⊖ B'],'−','β(A)')],
+  done:n=>`Batas berisi ${n} piksel, yaitu 35 piksel A dikurangi 4 piksel hasil erosi.`},
+ gradien:{name:'Gradien morfologi',formula:'(A ⊕ B) − (A ⊖ B)',ses:[['B',BOX,'kotak 3×3']],
+  desc:'Gradien adalah selisih antara versi yang ditumbuhkan dan versi yang dikikis. Hasilnya pita yang mengapit tepi objek: satu piksel di luar dan satu piksel di dalam.',
+  effects:['Pita gradien lebih tebal daripada batas biasa karena mencakup sisi luar juga.','Lubang di (2,3) tertutup oleh dilasi, jadi tidak tampak sebagai tepi tersendiri.','Derau menjadi blok 3×3 penuh di gradien.','Hanya empat piksel inti (hasil erosi) yang kosong di tengah.'],
+  build:()=>[morph('A','dil',BOX,0,'A ⊕ B','B'),morph('A','ero',BOX,0,'A ⊖ B','B'),point(['A ⊕ B','A ⊖ B'],'−','Gradien')],
+  done:n=>`Gradien berisi ${n} piksel: 75 piksel hasil dilasi dikurangi 4 piksel hasil erosi.`},
+ tophat:{name:'Top-hat',formula:'A − (A ∘ B)',ses:[['B',BOX,'kotak 3×3']],
+  desc:'Top-hat menampilkan apa saja yang dibuang oleh opening, yaitu struktur objek yang lebih kecil atau lebih tipis dari SE.',
+  effects:['Piksel derau di (7,2) muncul.','Jembatan tipis di (4,6) muncul.','Baris 1–2 blok kiri muncul, karena opening membuangnya.','Dua blok persegi panjang yang rapi tidak muncul, karena keduanya lolos opening.'],
+  build:()=>[morph('A','ero',BOX,0,'A ⊖ B','B'),morph('A ⊖ B','dil',BOX,0,'A ∘ B','B'),point(['A','A ∘ B'],'−','Top-hat')],
+  done:n=>`Top-hat berisi ${n} piksel: semua bagian A yang terlalu kecil untuk SE 3×3.`},
+ blackhat:{name:'Black-hat',formula:'(A • B) − A',ses:[['B',BOX,'kotak 3×3']],
+  desc:'Black-hat menampilkan apa saja yang ditambahkan oleh closing, yaitu lubang dan celah latar yang lebih kecil dari SE.',
+  effects:['Lubang di (2,3) muncul.','Celah di (3,6) dan (5,6) di samping jembatan muncul.','Piksel (6,2) yang menyambungkan derau ke objek muncul.','Tidak ada piksel A yang muncul, karena hasilnya hanya berisi piksel yang tadinya latar.'],
+  build:()=>[morph('A','dil',BOX,0,'A ⊕ B','B'),morph('A ⊕ B','ero',BOX,0,'A • B','B'),point(['A • B','A'],'−','Black-hat')],
+  done:n=>`Black-hat berisi ${n} piksel: tepat empat piksel latar yang diisi oleh closing.`},
+ hitmiss:{name:'Hit-or-miss',formula:'A ⊛ B = (A ⊖ B₁) ∩ (Aᶜ ⊖ B₂)',ses:[['B₁',CENTER,'harus objek (pusat)'],['B₂',RING,'harus latar (8 tetangga)']],
+  desc:'Hit-or-miss mencari pola tertentu. B₁ menentukan sel yang harus objek, B₂ menentukan sel yang harus latar. Di sini polanya adalah piksel tunggal yang dikelilingi latar, jadi operasi ini mendeteksi piksel terisolasi.',
+  effects:['A ⊖ B₁ sama dengan A, karena B₁ hanya berisi pusat.','Aᶜ ⊖ B₂ bernilai 1 di setiap posisi yang kedelapan tetangganya latar.','Irisannya hanya satu piksel: derau di (7,2).','Lubang, jembatan, dan tepi tidak cocok dengan pola ini.'],
+  build:()=>[morph('A','ero',CENTER,0,'A ⊖ B₁','B₁'),point(['A'],'ᶜ','Aᶜ'),morph('Aᶜ','ero',RING,1,'Aᶜ ⊖ B₂','B₂'),point(['A ⊖ B₁','Aᶜ ⊖ B₂'],'∩','A ⊛ B')],
+  done:n=>`Hit-or-miss menemukan ${n} piksel, yaitu derau di (7,2). Ini cara klasik mendeteksi piksel terisolasi.`},
+ lubang:{name:'Pengisian lubang',formula:'Xₖ = (Xₖ₋₁ ⊕ B) ∩ Aᶜ',ses:[['B',CROSS,'salib 3×3']],
+  desc:'Pengisian lubang dimulai dari satu titik X₀ di dalam lubang, lalu didilasi berulang kali. Irisan dengan Aᶜ menjaga agar pertumbuhan tidak menembus objek. Iterasi berhenti saat Xₖ = Xₖ₋₁, lalu hasilnya digabung dengan A. SE salib dipakai agar pertumbuhan tidak bocor lewat celah diagonal.',
+  effects:['Titik awal X₀ = {(2,3)}, yaitu lubang itu sendiri.','Keempat tetangga salibnya objek, jadi X₁ = X₀ dan iterasi langsung berhenti di k = 1.','Pada lubang yang lebih besar, X akan menjalar sel demi sel sampai mentok di dinding objek.','Derau, jembatan, dan tepi tidak berubah sama sekali.'],
+  build:()=>{
+    const st=[point(['A'],'ᶜ','Aᶜ')];
+    mats['X'+sub(0)]=map((r,c)=>r===2&&c===3?1:0);
+    let k=1;
+    while(k<20){
+      const prev='X'+sub(k-1),dn=prev+' ⊕ B',cur='X'+sub(k);
+      st.push(morph(prev,'dil',CROSS,0,dn,'B'));
+      const p=point([dn,'Aᶜ'],'∩',cur);st.push(p);
+      if(sum(mats[cur])===sum(mats[prev])&&mats[cur].every((row,r)=>row.every((v,c)=>v===mats[prev][r][c]))){p.note=`${cur} = ${prev}, iterasi berhenti`;break}
+      k++;
+    }
+    const last='X'+sub(k);
+    st.push(point(['A',last],'∪','A ∪ '+last));
+    return st;
+  },
+  done:n=>`Hasil akhir ${n} piksel: 35 piksel A ditambah satu piksel lubang yang kini terisi.`}
+};
+
+/* ---------- UI ---------- */
+const $=id=>document.getElementById(id);
+const sel=$('op');
+Object.entries(OPS).forEach(([k,o])=>{const opt=document.createElement('option');opt.value=k;opt.textContent=`${o.name}   ${o.formula}`;sel.appendChild(opt)});
+
+let op,stages,g=0,timer=null,boardEls=[],curStage=-1;
+const total=()=>stages.length*N;
+
+function seIcon([name,mask,label]){
+  const w=document.createElement('div');w.className='se';
+  const gg=document.createElement('div');gg.className='g';
+  const hm=op===OPS.hitmiss;
+  mask.forEach(row=>row.forEach(v=>{const d=document.createElement('div');
+    if(v){d.className=(hm&&name==='B₂')?'zero':'on';d.textContent=(hm&&name==='B₂')?'0':'1'}else d.textContent='·';gg.appendChild(d)}));
+  w.innerHTML=`<strong style="font-family:var(--f-mono)">${name}</strong>`;w.appendChild(gg);
+  const s=document.createElement('small');s.textContent=label;w.appendChild(s);return w;
+}
+
+function loadOp(key){
+  stop();op=OPS[key];mats={A};stages=op.build();
+  $('opname').textContent=op.name;$('opformula').textContent=op.formula;$('opdesc').textContent=op.desc;
+  $('opeffects').innerHTML='';op.effects.forEach(t=>{const li=document.createElement('li');li.textContent=t;$('opeffects').appendChild(li)});
+  $('opse').innerHTML='';op.ses.forEach(s=>$('opse').appendChild(seIcon(s)));
+  const sc=$('stages');sc.innerHTML='';
+  stages.forEach((s,i)=>{const b=document.createElement('button');b.className='stage';
+    b.textContent=`${i+1} · ${s.type==='morph'?`${s.ins[0]} ${s.op==='dil'?'⊕':'⊖'} ${s.seName}`:(s.sym==='ᶜ'?s.ins[0]+'ᶜ':`${s.ins[0]} ${s.sym} ${s.ins[1]}`)}`;
+    b.onclick=()=>{stop();go(i*N)};sc.appendChild(b)});
+  curStage=-1;go(0);
+}
+
+function makeGrid(name,isIn,pad){
+  const wrap=document.createElement('div');wrap.className='board';
+  const h=document.createElement('h4');h.innerHTML=`<span>${name}</span><small></small>`;wrap.appendChild(h);
+  const gr=document.createElement('div');gr.className='grid'+(isIn?' in':'');
+  const cells={};
+  for(let r=-1;r<=R;r++)for(let c=-1;c<=C;c++){
+    const d=document.createElement('div');const isPad=r<0||r>=R||c<0||c>=C;
+    if(isPad){ if(pad===null)d.className='cell ghost';else{d.className='cell pad'+(pad?' one':'');d.textContent=pad} }
+    else{cells[r+','+c]=d; if(isIn)d.onclick=()=>{stop();go(curStage*N+r*C+c)}}
+    gr.appendChild(d);
+  }
+  const fr=document.createElement('div');fr.className='frame';gr.appendChild(fr);
+  wrap.appendChild(gr);
+  return {wrap,cells,fr,count:h.querySelector('small'),name};
+}
+
+function buildStage(s){
+  const b=$('boards');b.innerHTML='';boardEls=[];
+  const ins=s.ins.map(n=>makeGrid(n,true,s.type==='morph'?s.pad:null));
+  const out=makeGrid(s.out,false,null);
+  [...ins,out].forEach(x=>b.appendChild(x.wrap));
+  b.className='boards n'+(ins.length+1);
+  ins.forEach((x,i)=>{x.fr.style.width=(s.type==='morph'?300:100)/13+'%';x.fr.style.height=(s.type==='morph'?300:100)/11+'%';
+    const M=mats[s.ins[i]];
+    for(let r=0;r<R;r++)for(let c=0;c<C;c++){const d=x.cells[r+','+c];d.textContent=M[r][c];d.className='cell'+(M[r][c]?' one':'')}
+    x.count.textContent=sum(M)+' piksel objek'});
+  out.fr.style.width=100/13+'%';out.fr.style.height=100/11+'%';
+  boardEls={ins,out};
+  $('stitle').textContent=`Tahap ${stages.indexOf(s)+1} dari ${stages.length}: ${s.out}`;
+  $('snote').textContent=s.type==='morph'?`${s.op==='dil'?'Dilasi':'Erosi'} ${s.ins[0]} dengan ${s.seName}`+(s.pad?' · di luar citra = 1 (latar pada Aᶜ)':''):({'−':'Selisih piksel demi piksel','∩':'Irisan piksel demi piksel','∪':'Gabungan piksel demi piksel','ᶜ':'Komplemen piksel demi piksel'})[s.sym]+(s.note?` · ${s.note}`:'');
+  $('minititle').textContent=s.type==='morph'?'Isi jendela 3×3 (hanya sel SE yang dipakai)':'Nilai di posisi ini';
+  const mw=$('miniwrap');mw.innerHTML='';
+  if(s.type==='morph'){const m=document.createElement('div');m.className='mini';for(let k=0;k<9;k++)m.appendChild(document.createElement('div'));mw.appendChild(m)}
+  else{const p=document.createElement('div');p.className='pointvals';[...s.ins,s.out].forEach(n=>{const d=document.createElement('div');d.innerHTML=`<span>${n}</span><b>0</b>`;p.appendChild(d)});mw.appendChild(p)}
+}
+
+function render(){
+  const si=Math.floor(g/N),idx=g%N,s=stages[si];
+  if(si!==curStage){curStage=si;buildStage(s)}
+  [...$('stages').children].forEach((b,i)=>b.className='stage'+(i===si?' active':i<si?' done':''));
+  const r=Math.floor(idx/C),c=idx%C;
+  const {ins,out}=boardEls;
+  ins.forEach(x=>{if(s.type==='morph'){x.fr.style.left=c*100/13+'%';x.fr.style.top=r*100/11+'%'}else{x.fr.style.left=(c+1)*100/13+'%';x.fr.style.top=(r+1)*100/11+'%'}});
+  out.fr.style.left=(c+1)*100/13+'%';out.fr.style.top=(r+1)*100/11+'%';
+  const O=mats[s.out],REF=mats[s.ins[0]];let cnt=0;
+  for(let i=0;i<N;i++){const rr=Math.floor(i/C),cc=i%C,d=out.cells[rr+','+cc];
+    if(i<=idx){const o=O[rr][cc],f=REF[rr][cc];cnt+=o;d.textContent=o;d.className='cell'+(o?(f?' one':' grow'):(f?' lost':''))}
+    else{d.className='cell todo';d.textContent='·'}}
+  out.count.textContent=cnt+' piksel objek';
+
+  const o=O[r][c],f=REF[r][c];
+  const cls=o?(f?'v1':'vg'):(f?'vl':'v0');
+  let verdict,ex;
+  if(s.type==='morph'){
+    const M=mats[s.ins[0]],cells=$('miniwrap').querySelector('.mini').children;
+    let k=0,ones=0,used=0,outs=0;
+    for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const rr=r+i,cc=c+j,isOut=rr<0||rr>=R||cc<0||cc>=C,v=get(M,rr,cc,s.pad),on=s.mask[i+1][j+1],d=cells[k++];
+      if(!on){d.className='off'+(i===0&&j===0?' ctr':'');d.textContent='–';continue}
+      d.className=(v?'one':'')+(isOut?' out':'')+(i===0&&j===0?' ctr':'');d.textContent=v;used++;ones+=v;outs+=isOut}
+    $('pos').textContent=`Posisi (${r},${c}) · ${used} sel SE dipakai`+(outs?` · ${outs} di luar citra (= ${s.pad})`:'');
+    if(s.op==='dil'){verdict=ones?`Ada ${ones} angka 1 di dalam SE → keluaran `:`Semua sel SE bernilai 0 → keluaran `;
+      ex=o&&!f?'Piksel ini 0 di masukan, tetapi SE menyentuh objek, jadi bertambah.':o?'Piksel ini memang sudah 1, dan dilasi tidak pernah menghapus objek.':'Tidak ada satu pun angka 1 di bawah SE, jadi tetap 0.'}
+    else{const zeros=used-ones;verdict=zeros?`Ada ${zeros} angka 0 di dalam SE → keluaran `:`Semua ${used} sel SE bernilai 1 → keluaran `;
+      ex=o?'SE muat seluruhnya di dalam objek, jadi piksel ini bertahan.':f?'Piksel ini 1 di masukan, tetapi SE tidak muat seluruhnya di dalam objek, jadi terkikis.':'Piksel ini memang 0, dan erosi tidak pernah menambah objek.';
+      if(s.seName==='B₂')ex=o?'Kedelapan tetangga di A adalah latar. Posisi ini cocok dengan bagian "miss" dari pola.':'Ada tetangga yang bukan latar (atau pusatnya sendiri objek di A), jadi tidak cocok dengan B₂.';
+      if(s.seName==='B₁')ex='B₁ hanya berisi pusat, jadi hasilnya sama dengan nilai piksel itu sendiri.'}
+  }else{
+    const vals=s.ins.map(n=>mats[n][r][c]);
+    const boxes=$('miniwrap').querySelectorAll('.pointvals b');vals.forEach((v,i)=>boxes[i].textContent=v);boxes[vals.length].textContent=o;
+    $('pos').textContent=`Posisi (${r},${c})`;
+    verdict=`${s.out} → keluaran `;ex=PT[s.sym].txt(s.ins,vals,o);
+  }
+  $('verdict').innerHTML=verdict+`<b class="${cls}">${o}</b>`;
+  $('explain').textContent=ex;
+  $('bar').style.width=((g+1)/total()*100)+'%';
+  const fin=g===total()-1;$('done').hidden=!fin;
+  if(fin)$('donetext').innerHTML='<strong>Selesai.</strong> '+op.done(sum(mats[stages[stages.length-1].out]));
+}
+function go(i){g=Math.max(0,Math.min(total()-1,i));render()}
+const DELAYS=[900,600,400,260,170,110,70,45,25,10];
+const delay=()=>DELAYS[$('spd').value-1];
+function tick(){if(g>=total()-1){stop();return}go(g+1);timer=setTimeout(tick,delay())}
+function start(){if(g>=total()-1)go(0);$('play').textContent='Jeda';clearTimeout(timer);timer=setTimeout(tick,delay())}
+function stop(){clearTimeout(timer);timer=null;$('play').textContent='Putar'}
+$('play').onclick=()=>timer?stop():start();
+$('next').onclick=()=>{stop();go(g+1)};
+$('prev').onclick=()=>{stop();go(g-1)};
+$('stageEnd').onclick=()=>{stop();go(curStage*N+N-1)};
+$('end').onclick=()=>{stop();go(total()-1)};
+$('reset').onclick=()=>{stop();go(0)};
+sel.onchange=()=>loadOp(sel.value);
+document.addEventListener('keydown',e=>{if(['INPUT','SELECT'].includes(e.target.tagName))return;
+  if(e.key==='ArrowRight'){stop();go(g+1)}else if(e.key==='ArrowLeft'){stop();go(g-1)}else if(e.key===' '){e.preventDefault();timer?stop():start()}});
+loadOp('erosi');
+</script>
+</body>
+</html>
